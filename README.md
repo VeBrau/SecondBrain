@@ -10,7 +10,7 @@ A Fabric mod that brings intelligent NPCs to your minecraft world. Create player
 ## Requirements
       
 - **Minecraft Version**: 1.20.1 (the latest version of this mod only supports 1.20.1 currently)
-- **Running Ollama server OR Player2 App OR an OpenAi Key**
+- **Running Ollama server OR Player2 App OR an OpenAI/OpenRouter API key**
 
 ## Mod Installation
 
@@ -54,12 +54,15 @@ A Fabric mod that brings intelligent NPCs to your minecraft world. Create player
    - Use the gui to create/edit an NPC and put in the address to your ollama server (complete url with http://...; 
      if you're running your ollama on your local pc then you can just use the one that's already typed in)
 
-## Setup OpenAi (Paid)
+## Setup OpenAI / OpenRouter (Paid)
 1. **Create API Key**
-   - Visit [OpenAi's website](https://platform.openai.com/api-keys), sign up/log in and create a API key
-   - Copy the created key
+   - For OpenAI, visit [OpenAI's website](https://platform.openai.com/api-keys) and create an API key.
+   - For OpenRouter, visit [OpenRouter's website](https://openrouter.ai/keys) and create an API key.
 2. **Use the Key in the mod**
-   - Open the GUI and create an NPC with the LLM Type `OPENAI` and paste key into the Key field. (The key wont be ever shared with any other clients that has access to the GUI, also not your client. It will be saved in a secondbrain config file on the server)
+   - Open the GUI and create an NPC with the LLM Type `OPENAI` or `OPENROUTER`.
+   - Paste the key into the API key field and choose the model you want.
+   - New OpenRouter NPCs default to `x-ai/grok-4.1-fast`.
+   - The key is stored on the server in the `secondbrain` config folder.
 
 ## Usage with Player2 App
 

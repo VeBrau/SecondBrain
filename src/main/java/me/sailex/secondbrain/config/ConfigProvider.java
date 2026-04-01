@@ -34,6 +34,7 @@ public class ConfigProvider {
             Files.createDirectories(BASE_CONFIG_DIR);
 
             this.npcConfigs = loadAll(NPC_CONFIG_DIR, NPCConfig.class);
+            this.npcConfigs.forEach(NPCConfig::ensureDefaults);
             this.baseConfig = loadAll(BASE_CONFIG_DIR, BaseConfig.class).stream()
                     .findFirst()
                     .orElseGet(BaseConfig::new);
@@ -94,6 +95,7 @@ public class ConfigProvider {
     }
 
     public synchronized NPCConfig addNpcConfig(NPCConfig npcConfig) {
+        npcConfig.ensureDefaults();
         npcConfigs.add(npcConfig);
         return npcConfig;
     }
@@ -101,10 +103,20 @@ public class ConfigProvider {
     public synchronized void updateNpcConfig(NPCConfig updatedConfig) {
         npcConfigs.forEach(config -> {
             if (config.getNpcName().equals(updatedConfig.getNpcName())) {
-                if (config.getOpenaiApiKey().isEmpty()) updatedConfig.setOpenaiApiKey(config.getOpenaiApiKey()); //prevent overwriting key with default string
+                preserveSecrets(config, updatedConfig);
+                updatedConfig.ensureDefaults();
                 npcConfigs.set(npcConfigs.indexOf(config), updatedConfig);
             }
         });
+    }
+
+    private void preserveSecrets(NPCConfig existingConfig, NPCConfig updatedConfig) {
+        if (updatedConfig.getOpenaiApiKey().isBlank()) {
+            updatedConfig.setOpenaiApiKey(existingConfig.getOpenaiApiKey());
+        }
+        if (updatedConfig.getOpenrouterApiKey().isBlank()) {
+            updatedConfig.setOpenrouterApiKey(existingConfig.getOpenrouterApiKey());
+        }
     }
 
     public Optional<NPCConfig> getNpcConfig(UUID uuid) {

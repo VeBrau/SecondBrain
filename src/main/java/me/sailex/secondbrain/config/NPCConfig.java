@@ -10,6 +10,8 @@ import io.wispforest.endec.impl.StructEndecBuilder;
 
 public class NPCConfig implements Configurable {
 
+	private static final String LEGACY_DEFAULT_MODEL = "llama3.2";
+
 	private String npcName = "Steve";
 	private UUID uuid = UUID.randomUUID();
 	private boolean isActive = true;
@@ -18,6 +20,7 @@ public class NPCConfig implements Configurable {
 	private String ollamaUrl = "http://localhost:11434";
     private String llmModel = "llama3.2";
 	private String openaiApiKey = "";
+	private String openrouterApiKey = "";
 	private String voiceId = "not set";
 	private String skinUrl = "";
 
@@ -35,9 +38,26 @@ public class NPCConfig implements Configurable {
 		boolean isActive,
 		String llmCharacter,
 		LLMType llmType,
+		String llmModel,
+		String ollamaUrl,
+		String openaiApiKey,
+		boolean isTTS,
+		String voiceId,
+		String skinUrl
+	) {
+		this(npcName, uuid, isActive, llmCharacter, llmType, llmModel, ollamaUrl, openaiApiKey, "", isTTS, voiceId, skinUrl);
+	}
+
+	public NPCConfig(
+		String npcName,
+		String uuid,
+		boolean isActive,
+		String llmCharacter,
+		LLMType llmType,
         String llmModel,
 		String ollamaUrl,
 		String openaiApiKey,
+		String openrouterApiKey,
 		boolean isTTS,
 		String voiceId,
 		String skinUrl
@@ -50,9 +70,11 @@ public class NPCConfig implements Configurable {
         this.llmModel = llmModel;
 		this.ollamaUrl = ollamaUrl;
 		this.openaiApiKey = openaiApiKey;
+		this.openrouterApiKey = openrouterApiKey;
 		this.isTTS = isTTS;
 		this.voiceId = voiceId;
 		this.skinUrl = skinUrl;
+		ensureDefaults();
 	}
 
 	public static class Builder {
@@ -89,6 +111,7 @@ public class NPCConfig implements Configurable {
 		}
 
 		public NPCConfig build() {
+			npcConfig.ensureDefaults();
 			return npcConfig;
 		}
 
@@ -131,12 +154,17 @@ public class NPCConfig implements Configurable {
 		return openaiApiKey;
 	}
 
+	public String getOpenrouterApiKey() {
+		return openrouterApiKey;
+	}
+
 	public void setLlmCharacter(String llmCharacter) {
 		this.llmCharacter = llmCharacter;
 	}
 
 	public void setLlmType(LLMType llmType) {
 		this.llmType = llmType;
+		ensureDefaults();
 	}
 
 	public void setOllamaUrl(String ollamaUrl) {
@@ -145,6 +173,10 @@ public class NPCConfig implements Configurable {
 
 	public void setOpenaiApiKey(String openaiApiKey) {
 		this.openaiApiKey = openaiApiKey;
+	}
+
+	public void setOpenrouterApiKey(String openrouterApiKey) {
+		this.openrouterApiKey = openrouterApiKey;
 	}
 
 	public void setActive(boolean active) {
@@ -187,6 +219,16 @@ public class NPCConfig implements Configurable {
 		this.skinUrl = skinUrl;
 	}
 
+	public void ensureDefaults() {
+		ensureDefaultModelForLlmType();
+	}
+
+	private void ensureDefaultModelForLlmType() {
+		if (llmType == LLMType.OPENROUTER && (llmModel == null || llmModel.isBlank() || LEGACY_DEFAULT_MODEL.equals(llmModel))) {
+			llmModel = OPENROUTER_DEFAULT_MODEL;
+		}
+	}
+
 	@Override
 	public String getConfigName() {
 		return npcName.toLowerCase();
@@ -202,6 +244,7 @@ public class NPCConfig implements Configurable {
             Endec.STRING.fieldOf("llmModel", NPCConfig::getLlmModel),
 			Endec.STRING.fieldOf("ollamaUrl", NPCConfig::getOllamaUrl),
 			Endec.STRING.fieldOf("openaiApiKey", NPCConfig::getOpenaiApiKey),
+			Endec.STRING.fieldOf("openrouterApiKey", NPCConfig::getOpenrouterApiKey),
 			Endec.BOOLEAN.fieldOf("isTTS", NPCConfig::isTTS),
 			Endec.STRING.fieldOf("voiceId", NPCConfig::getVoiceId),
 			Endec.STRING.fieldOf("skinUrl", NPCConfig::getSkinUrl),
@@ -218,6 +261,7 @@ public class NPCConfig implements Configurable {
                 config.llmModel,
                 config.ollamaUrl,
                 config.openaiApiKey,
+                config.openrouterApiKey,
                 config.isTTS,
                 config.voiceId,
                 config.skinUrl
@@ -232,6 +276,7 @@ public class NPCConfig implements Configurable {
 				",llmType=" + llmType +
 				",ollamaUrl=" + ollamaUrl +
 				",openaiApiKey=***" +
+				",openrouterApiKey=***" +
 				",llmCharacter=" + llmCharacter +
 				",voiceId=" + voiceId + "}";
 	}
@@ -241,8 +286,10 @@ public class NPCConfig implements Configurable {
 	public static final String EDIT_NPC = "Edit '%s'";
 	public static final String LLM_CHARACTER = "Characteristics";
 	public static final String LLM_TYPE = "Type";
-    public static final String LLM_MODEL = "LLM Model";
+	public static final String LLM_MODEL = "LLM Model";
 	public static final String OLLAMA_URL = "Ollama URL";
 	public static final String OPENAI_API_KEY = "OpenAI API Key";
+	public static final String OPENROUTER_API_KEY = "OpenRouter API Key";
 	public static final String IS_TTS = "Text to Speech";
+	public static final String OPENROUTER_DEFAULT_MODEL = "x-ai/grok-4.1-fast";
 }

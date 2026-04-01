@@ -16,10 +16,13 @@ public record ConfigPacket(BaseConfig baseConfig, List<NPCConfig> npcConfigs) {
     );
 
     /**
-     * Removes llm secret from the npcConfigs.
+     * Removes llm secrets from the npcConfigs.
      */
     public void hideSecret() {
-        npcConfigs.forEach(config -> config.setOpenaiApiKey(""));
+        npcConfigs.forEach(config -> {
+            config.setOpenaiApiKey("");
+            config.setOpenrouterApiKey("");
+        });
     }
 
     @Override
