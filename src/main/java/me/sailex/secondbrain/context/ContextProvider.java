@@ -22,7 +22,6 @@ public class ContextProvider {
 	public ContextProvider(ServerPlayerEntity npcEntity, BaseConfig config) {
 		this.npcEntity = npcEntity;
 		this.chunkManager = new ChunkManager(npcEntity, config);
-		buildContext();
 	}
 
 	/**
@@ -33,7 +32,7 @@ public class ContextProvider {
 			WorldContext context = new WorldContext(
 					getNpcState(),
 					getInventoryState(),
-					chunkManager.getNearbyBlocks(),
+					new ArrayList<>(chunkManager.getNearbyBlocks()),
 					getNearbyEntities()
 			);
 //			chunkManager.getNearbyBlocks().forEach(blockData -> LogUtil.debugInChat(blockData.toString()));

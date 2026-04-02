@@ -124,3 +124,6 @@ runs/
 !gradle-wrapper.jar
 
 .env
+
+.gradle-user/
+.gradle-user/*

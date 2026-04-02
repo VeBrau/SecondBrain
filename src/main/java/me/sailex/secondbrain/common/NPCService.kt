@@ -31,9 +31,16 @@ class NPCService(
 
     private lateinit var executorService: ExecutorService
     val uuidToNpc = ConcurrentHashMap<UUID, NPC>()
+    private var deathListenerRegistered = false
 
     fun init() {
         executorService = Executors.newSingleThreadExecutor()
+        if (!deathListenerRegistered) {
+            NPCEvents.ON_DEATH.register {
+                removeNpc(it.uuid, EntityVer.getWorld(it).server!!.playerManager)
+            }
+            deathListenerRegistered = true
+        }
     }
 
     fun createNpc(newConfig: NPCConfig, server: MinecraftServer, spawnPos: BlockPos?, owner: PlayerEntity?) {
@@ -46,16 +53,12 @@ class NPCService(
 
             NPCSpawner.spawn(config, server, spawnPos) { npcEntity ->
                 config.uuid = npcEntity.uuid
-                val npc = factory.createNpc(npcEntity, config, resourceProvider.loadedConversations[config.uuid])
+                val npc = factory.createNpc(npcEntity, server, config, resourceProvider.loadedConversations[config.uuid])
                 npc.controller.owner = owner
                 uuidToNpc[config.uuid] = npc
 
                 LogUtil.infoInChat(("Added NPC with name: $name"))
                 npc.eventHandler.onEvent(Instructions.INITIAL_PROMPT)
-            }
-
-            NPCEvents.ON_DEATH.register {
-                removeNpc(it.uuid, EntityVer.getWorld(it).server!!.playerManager)
             }
         }, executorService).exceptionally {
             LogUtil.errorInChat(it.message)
@@ -94,7 +97,7 @@ class NPCService(
     }
 
     fun shutdownNPCs(server: MinecraftServer) {
-        uuidToNpc.keys.forEach {
+        uuidToNpc.keys.toList().forEach {
             removeNpc(it, server.playerManager)
         }
         executorService.shutdownNow()

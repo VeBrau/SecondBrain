@@ -5,7 +5,6 @@ import com.google.gson.JsonParseException
 import me.sailex.altoclef.AltoClefController
 import me.sailex.altoclef.tasks.LookAtOwnerTask
 import me.sailex.secondbrain.config.NPCConfig
-import me.sailex.secondbrain.constant.Instructions
 import me.sailex.secondbrain.context.ContextProvider
 import me.sailex.secondbrain.history.ConversationHistory
 import me.sailex.secondbrain.history.Message
@@ -14,10 +13,13 @@ import me.sailex.secondbrain.llm.player2.Player2APIClient
 import me.sailex.secondbrain.llm.roles.Player2ChatRole
 import me.sailex.secondbrain.util.LogUtil
 import me.sailex.secondbrain.util.PromptFormatter
+import net.minecraft.server.MinecraftServer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class NPCEventHandler(
     private val llmClient: LLMClient,
@@ -25,6 +27,7 @@ class NPCEventHandler(
     private val contextProvider: ContextProvider,
     private val controller: AltoClefController,
     private val config: NPCConfig,
+    private val server: MinecraftServer,
 ): EventHandler {
     companion object {
         private val gson = GsonBuilder()
@@ -55,8 +58,7 @@ class NPCEventHandler(
             history.add(response)
 
             val parsedMessage = parse(response.message)
-            val succeeded = execute(parsedMessage.command)
-            if (!succeeded) {
+            if (!execute(parsedMessage.command)) {
                 return@runAsync
             }
 
@@ -65,7 +67,9 @@ class NPCEventHandler(
                 if (llmClient is Player2APIClient && config.isTTS) {
                     llmClient.startTextToSpeech(parsedMessage.message)
                 } else {
-                    controller.controllerExtras.chat(parsedMessage.message)
+                    server.execute {
+                        controller.controllerExtras.chat(parsedMessage.message)
+                    }
                 }
             }
         }, executorService)
@@ -106,24 +110,43 @@ class NPCEventHandler(
     }
 
     fun execute(command: String): Boolean {
-        var successful = true
-        val cmdExecutor = controller.commandExecutor
-        val commandWithPrefix = if (cmdExecutor.isClientCommand(command)) {
-            command
-        } else {
-            cmdExecutor.commandPrefix + command
-        }
-        cmdExecutor.execute(commandWithPrefix, {
-            controller.runUserTask(LookAtOwnerTask())
+        val successful = AtomicBoolean(true)
+        val completionLatch = CountDownLatch(1)
+
+        server.execute {
+            try {
+                val cmdExecutor = controller.commandExecutor
+                val commandWithPrefix = if (cmdExecutor.isClientCommand(command)) {
+                    command
+                } else {
+                    cmdExecutor.commandPrefix + command
+                }
+                cmdExecutor.execute(commandWithPrefix, {
+                    server.execute {
+                        controller.runUserTask(LookAtOwnerTask())
+                    }
 //            if (queueIsEmpty()) {
 //                //this.onEvent(Instructions.COMMAND_FINISHED_PROMPT.format(commandWithPrefix))
 //            }
-        }, {
-            successful = false
-            this.onEvent(Instructions.COMMAND_ERROR_PROMPT.format(commandWithPrefix, it.message))
-            LogUtil.error("Error executing command: $commandWithPrefix", it)
-        })
-        return successful
+                }, {
+                    successful.set(false)
+                    LogUtil.error("Error executing command: $commandWithPrefix", it)
+                })
+            } catch (e: Exception) {
+                successful.set(false)
+                LogUtil.error("Error executing NPC command", e)
+            } finally {
+                completionLatch.countDown()
+            }
+        }
+
+        return try {
+            val completed = completionLatch.await(5, TimeUnit.SECONDS)
+            completed && successful.get()
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
     }
 
     data class CommandMessage(

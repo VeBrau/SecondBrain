@@ -18,12 +18,18 @@ import me.sailex.secondbrain.llm.openrouter.OpenRouterClient
 import me.sailex.secondbrain.llm.player2.Player2APIClient
 import me.sailex.secondbrain.model.NPC
 import me.sailex.secondbrain.model.database.Conversation
+import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayerEntity
 
 class NPCFactory(
     private val configProvider: ConfigProvider,
 ) {
-     fun createNpc(npcEntity: ServerPlayerEntity, config: NPCConfig, loadedConversation: List<Conversation>?): NPC {
+     fun createNpc(
+        npcEntity: ServerPlayerEntity,
+        server: MinecraftServer,
+        config: NPCConfig,
+        loadedConversation: List<Conversation>?
+    ): NPC {
         val baseConfig = configProvider.baseConfig
         val contextProvider = ContextProvider(npcEntity, baseConfig)
 
@@ -39,7 +45,7 @@ class NPCFactory(
             ?.map { Message(it.message, it.role) }
             ?.toMutableList() ?: mutableListOf()
         val history = ConversationHistory(llmClient, defaultPrompt, messages)
-        val eventHandler = NPCEventHandler(llmClient, history, contextProvider, controller, config)
+        val eventHandler = NPCEventHandler(llmClient, history, contextProvider, controller, config, server)
         return NPC(npcEntity, llmClient, history, eventHandler, controller, contextProvider, config)
     }
 
